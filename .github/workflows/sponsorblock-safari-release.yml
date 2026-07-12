@@ -1,4 +1,5 @@
 name: Package SponsorBlock Safari Release
+
 on:
   workflow_dispatch:
     inputs:
@@ -129,14 +130,20 @@ jobs:
           fi
 
           xcodebuild -list -json -project "$PROJECT" > "$RUNNER_TEMP/xcodebuild-list.json"
-          mapfile -t SCHEMES < <(python3 - <<'PYSCHEMES'
+          python3 - <<'PYSCHEMES' > "$RUNNER_TEMP/xcodebuild-schemes.txt"
           import json, os
           with open(os.environ["RUNNER_TEMP"] + "/xcodebuild-list.json") as f:
               data = json.load(f)
           for scheme in data.get("project", {}).get("schemes", []):
               print(scheme)
           PYSCHEMES
-          )
+
+          SCHEMES=()
+          while IFS= read -r scheme; do
+            if [[ -n "$scheme" ]]; then
+              SCHEMES+=("$scheme")
+            fi
+          done < "$RUNNER_TEMP/xcodebuild-schemes.txt"
 
           if [[ "${#SCHEMES[@]}" -eq 0 ]]; then
             echo "::error::Could not detect any Xcode schemes."
