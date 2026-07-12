@@ -38,19 +38,26 @@ jobs:
             -project "$PROJECT_PATH" \
             -target "SponsorBlock for YouTube (macOS)" \
             -configuration Release \
-            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CONFIGURATION_BUILD_DIR="$RUNNER_TEMP/build" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             build
 
       - name: Zip built app
         run: |
-          APP_PATH="$RUNNER_TEMP/DerivedData/Build/Products/Release/SponsorBlock for YouTube.app"
+          APP_PATH="$RUNNER_TEMP/build/SponsorBlock for YouTube.app"
           ditto -c -k --keepParent \
             "$APP_PATH" \
             "$RUNNER_TEMP/sponsorblock-safari-macos-app.zip"
 
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sponsorblock-safari-macos-app
+          path: ${{ runner.temp }}/sponsorblock-safari-macos-app.zip
+
       - name: Upload app to release
+        if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
