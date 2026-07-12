@@ -28,7 +28,17 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/packaged"
           cd "$RUNNER_TEMP/packaged"
-          xcrun safari-web-extension-packager "$RUNNER_TEMP/SafariExtension"
+
+          if xcrun --find safari-web-extension-packager >/dev/null 2>&1; then
+            TOOL=safari-web-extension-packager
+          elif xcrun --find safari-web-extension-converter >/dev/null 2>&1; then
+            TOOL=safari-web-extension-converter
+          else
+            echo "Neither safari-web-extension-packager nor safari-web-extension-converter is available"
+            exit 1
+          fi
+
+          xcrun "$TOOL" "$RUNNER_TEMP/SafariExtension"
 
       - name: Build macOS app
         run: |
