@@ -1,0 +1,34 @@
+name: Build Safari extension
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Download SponsorBlock Safari release
+        run: |
+          curl -L \
+            -o "$RUNNER_TEMP/SafariExtension.zip" \
+            https://github.com/ajayyy/SponsorBlock/releases/download/6.1.6/SafariExtension.zip
+
+      - name: Unzip release
+        run: |
+          mkdir -p "$RUNNER_TEMP/SafariExtension"
+          unzip -q "$RUNNER_TEMP/SafariExtension.zip" -d "$RUNNER_TEMP/SafariExtension"
+
+      - name: Package Safari extension
+        run: |
+          mkdir -p "$RUNNER_TEMP/packaged"
+          cd "$RUNNER_TEMP/packaged"
+          xcrun safari-web-extension-packager "$RUNNER_TEMP/SafariExtension"
+          find . -maxdepth 2 -print
+
+      - name: Upload packaged output
+        uses: actions/upload-artifact@v4
+        with:
+          name: sponsorblock-safari-package
+          path: ${{ runner.temp }}/packaged
