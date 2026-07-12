@@ -1,6 +1,7 @@
 name: Build Safari extension
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
@@ -29,16 +30,31 @@ jobs:
           cd "$RUNNER_TEMP/packaged"
           xcrun safari-web-extension-packager "$RUNNER_TEMP/SafariExtension"
 
-      - name: Zip packaged output
+      - name: Build macOS app
         run: |
-          cd "$RUNNER_TEMP/packaged"
-          zip -qry "$RUNNER_TEMP/sponsorblock-safari-package.zip" .
+          PROJECT_PATH="$RUNNER_TEMP/packaged/SponsorBlock for YouTube/SponsorBlock for YouTube.xcodeproj"
 
-      - name: Upload package to release
+          xcodebuild \
+            -project "$PROJECT_PATH" \
+            -target "SponsorBlock for YouTube (macOS)" \
+            -configuration Release \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Zip built app
+        run: |
+          APP_PATH="$RUNNER_TEMP/DerivedData/Build/Products/Release/SponsorBlock for YouTube.app"
+          ditto -c -k --keepParent \
+            "$APP_PATH" \
+            "$RUNNER_TEMP/sponsorblock-safari-macos-app.zip"
+
+      - name: Upload app to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload \
             "${{ github.event.release.tag_name }}" \
-            "$RUNNER_TEMP/sponsorblock-safari-package.zip" \
+            "$RUNNER_TEMP/sponsorblock-safari-macos-app.zip" \
             --clobber
