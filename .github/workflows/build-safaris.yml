@@ -1,4 +1,4 @@
-name: Build Safari extension
+name: Build Safari extensions
 
 on:
   release:
