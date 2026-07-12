@@ -38,25 +38,49 @@ jobs:
             -project "$PROJECT_PATH" \
             -target "SponsorBlock for YouTube (macOS)" \
             -configuration Release \
-            CONFIGURATION_BUILD_DIR="$RUNNER_TEMP/build" \
+            CONFIGURATION_BUILD_DIR="$RUNNER_TEMP/build-macos" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Zip built app
+      - name: Zip macOS app
         run: |
-          APP_PATH="$RUNNER_TEMP/build/SponsorBlock for YouTube.app"
+          APP_PATH="$RUNNER_TEMP/build-macos/SponsorBlock for YouTube.app"
           ditto -c -k --keepParent \
             "$APP_PATH" \
             "$RUNNER_TEMP/sponsorblock-safari-macos-app.zip"
 
-      - name: Upload app artifact
+      - name: Build iOS device app
+        run: |
+          PROJECT_PATH="$RUNNER_TEMP/packaged/SponsorBlock for YouTube/SponsorBlock for YouTube.xcodeproj"
+
+          xcodebuild \
+            -project "$PROJECT_PATH" \
+            -target "SponsorBlock for YouTube (iOS)" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            CONFIGURATION_BUILD_DIR="$RUNNER_TEMP/build-ios-device" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Zip iOS device app
+        run: |
+          APP_PATH="$RUNNER_TEMP/build-ios-device/SponsorBlock for YouTube.app"
+          ditto -c -k --keepParent \
+            "$APP_PATH" \
+            "$RUNNER_TEMP/sponsorblock-safari-ios-device-app.zip"
+
+      - name: Upload app artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: sponsorblock-safari-macos-app
-          path: ${{ runner.temp }}/sponsorblock-safari-macos-app.zip
+          name: sponsorblock-safari-builds
+          path: |
+            ${{ runner.temp }}/sponsorblock-safari-macos-app.zip
+            ${{ runner.temp }}/sponsorblock-safari-ios-device-app.zip
 
-      - name: Upload app to release
+      - name: Upload apps to release
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -64,4 +88,5 @@ jobs:
           gh release upload \
             "${{ github.event.release.tag_name }}" \
             "$RUNNER_TEMP/sponsorblock-safari-macos-app.zip" \
+            "$RUNNER_TEMP/sponsorblock-safari-ios-device-app.zip" \
             --clobber
