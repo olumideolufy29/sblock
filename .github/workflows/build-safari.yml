@@ -1,8 +1,11 @@
 name: Build Safari extension
 
 on:
-  workflow_dispatch:
-  push:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -25,10 +28,17 @@ jobs:
           mkdir -p "$RUNNER_TEMP/packaged"
           cd "$RUNNER_TEMP/packaged"
           xcrun safari-web-extension-packager "$RUNNER_TEMP/SafariExtension"
-          find . -maxdepth 2 -print
 
-      - name: Upload packaged output
-        uses: actions/upload-artifact@v4
-        with:
-          name: sponsorblock-safari-package
-          path: ${{ runner.temp }}/packaged
+      - name: Zip packaged output
+        run: |
+          cd "$RUNNER_TEMP/packaged"
+          zip -qry "$RUNNER_TEMP/sponsorblock-safari-package.zip" .
+
+      - name: Upload package to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload \
+            "${{ github.event.release.tag_name }}" \
+            "$RUNNER_TEMP/sponsorblock-safari-package.zip" \
+            --clobber
