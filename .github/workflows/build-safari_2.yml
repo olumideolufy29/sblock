@@ -1,0 +1,44 @@
+name: Build Safari extension
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Download SponsorBlock Safari release
+        run: |
+          curl -L \
+            -o "$RUNNER_TEMP/SafariExtension.zip" \
+            https://github.com/ajayyy/SponsorBlock/releases/download/6.1.6/SafariExtension.zip
+
+      - name: Unzip release
+        run: |
+          mkdir -p "$RUNNER_TEMP/SafariExtension"
+          unzip -q "$RUNNER_TEMP/SafariExtension.zip" -d "$RUNNER_TEMP/SafariExtension"
+
+      - name: Package Safari extension
+        run: |
+          mkdir -p "$RUNNER_TEMP/packaged"
+          cd "$RUNNER_TEMP/packaged"
+          xcrun safari-web-extension-packager "$RUNNER_TEMP/SafariExtension"
+
+      - name: Zip packaged output
+        run: |
+          cd "$RUNNER_TEMP/packaged"
+          zip -qry "$RUNNER_TEMP/sponsorblock-safari-package.zip" .
+
+      - name: Upload package to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload \
+            "${{ github.event.release.tag_name }}" \
+            "$RUNNER_TEMP/sponsorblock-safari-package.zip" \
+            --clobber
