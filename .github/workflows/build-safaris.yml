@@ -1,0 +1,59 @@
+name: Build Safari extension
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Download SponsorBlock Safari release
+        run: |
+          curl -L \
+            -o "$RUNNER_TEMP/SafariExtension.zip" \
+            https://github.com/ajayyy/SponsorBlock/releases/download/6.1.6/SafariExtension.zip
+
+      - name: Unzip release
+        run: |
+          mkdir -p "$RUNNER_TEMP/SafariExtension"
+          unzip -q "$RUNNER_TEMP/SafariExtension.zip" -d "$RUNNER_TEMP/SafariExtension"
+
+      - name: Package Safari extension
+        run: |
+          mkdir -p "$RUNNER_TEMP/packaged"
+          cd "$RUNNER_TEMP/packaged"
+          xcrun safari-web-extension-packager "$RUNNER_TEMP/SafariExtension"
+
+      - name: Build macOS app
+        run: |
+          PROJECT_PATH="$RUNNER_TEMP/packaged/SponsorBlock for YouTube/SponsorBlock for YouTube.xcodeproj"
+
+          xcodebuild \
+            -project "$PROJECT_PATH" \
+            -target "SponsorBlock for YouTube (macOS)" \
+            -configuration Release \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Zip built app
+        run: |
+          APP_PATH="$RUNNER_TEMP/DerivedData/Build/Products/Release/SponsorBlock for YouTube.app"
+          ditto -c -k --keepParent \
+            "$APP_PATH" \
+            "$RUNNER_TEMP/sponsorblock-safari-macos-app.zip"
+
+      - name: Upload app to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload \
+            "${{ github.event.release.tag_name }}" \
+            "$RUNNER_TEMP/sponsorblock-safari-macos-app.zip" \
+            --clobber
