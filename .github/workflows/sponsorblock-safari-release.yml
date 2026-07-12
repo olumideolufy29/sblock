@@ -1,5 +1,4 @@
 name: Package SponsorBlock Safari Release
-
 on:
   workflow_dispatch:
     inputs:
